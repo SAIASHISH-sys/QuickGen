@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IPL Highlight Generator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.95;
+        }
+
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            margin-bottom: 30px;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #555;
+            font-size: 1.05em;
+        }
+
+        select {
+            width: 100%;
+            padding: 12px 15px;
+            font-size: 1em;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        select:hover {
+            border-color: #667eea;
+        }
+
+        select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .btn-generate {
+            width: 100%;
+            padding: 15px;
+            font-size: 1.2em;
+            font-weight: 600;
+            color: white;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 10px;
+        }
+
+        .btn-generate:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-generate:active {
+            transform: translateY(0);
+        }
+
+        .btn-generate:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .progress-container {
+            display: none;
+            margin-top: 20px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 30px;
+            background: #f0f0f0;
+            border-radius: 15px;
+            overflow: hidden;
+            margin-bottom: 10px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            transition: width 0.5s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+        }
+
+        .progress-message {
+            text-align: center;
+            color: #666;
+            font-size: 0.95em;
+        }
+
+        .video-container {
+            display: none;
+            margin-top: 30px;
+        }
+
+        .video-wrapper {
+            position: relative;
+            width: 100%;
+            padding-bottom: 177.78%; /* 9:16 aspect ratio for 720x1280 */
+            background: #000;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .video-wrapper video {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        .video-title {
+            font-size: 1.3em;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .error-message {
+            display: none;
+            padding: 15px;
+            background: #fee;
+            border: 1px solid #fcc;
+            border-radius: 8px;
+            color: #c33;
+            margin-top: 20px;
+        }
+
+        .success-message {
+            display: none;
+            padding: 15px;
+            background: #efe;
+            border: 1px solid #cfc;
+            border-radius: 8px;
+            color: #3c3;
+            margin-top: 20px;
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+            margin-left: 10px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .info-box {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .info-box strong {
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏏 IPL Highlight Generator</h1>
+            <p>Generate AI-powered cricket commentary highlights</p>
+        </div>
+
+        <div class="card">
+            <form id="highlightForm">
+                <div class="form-group">
+                    <label for="yearSelect">Select IPL Year</label>
+                    <select id="yearSelect" name="year" required>
+                        <option value="">-- Choose a year --</option>
+                        {% for year in years %}
+                        <option value="{{ year }}">IPL {{ year }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="matchSelect">Select Match</label>
+                    <select id="matchSelect" name="match" required disabled>
+                        <option value="">-- First select a year --</option>
+                    </select>
+                </div>
+
+                <button type="submit" class="btn-generate" id="generateBtn">
+                    🎬 Generate Highlight
+                </button>
+            </form>
+
+            <div class="progress-container" id="progressContainer">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill">0%</div>
+                </div>
+                <div class="progress-message" id="progressMessage">Starting...</div>
+            </div>
+
+            <div class="error-message" id="errorMessage"></div>
+            <div class="success-message" id="successMessage"></div>
+
+            <div class="info-box">
+                <strong>ℹ️ How it works:</strong><br>
+                1. Select an IPL year and match<br>
+                2. Click "Generate Highlight" to start<br>
+                3. AI will generate commentary using Google Gemini<br>
+                4. Text will be converted to speech with ElevenLabs<br>
+                5. HeyGen will create an AI avatar video<br>
+                <br>
+                <strong>⏱️ Processing time:</strong> 2-5 minutes depending on server load
+            </div>
+        </div>
+
+        <div class="card video-container" id="videoContainer">
+            <h2 class="video-title" id="videoTitle">Generated Highlight</h2>
+            <div class="video-wrapper">
+                <video id="videoPlayer" controls>
+                    <source id="videoSource" src="" type="video/mp4">
+                    Your browser does not support the video tag.
+                </video>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const yearSelect = document.getElementById('yearSelect');
+        const matchSelect = document.getElementById('matchSelect');
+        const generateBtn = document.getElementById('generateBtn');
+        const progressContainer = document.getElementById('progressContainer');
+        const progressFill = document.getElementById('progressFill');
+        const progressMessage = document.getElementById('progressMessage');
+        const errorMessage = document.getElementById('errorMessage');
+        const successMessage = document.getElementById('successMessage');
+        const videoContainer = document.getElementById('videoContainer');
+        const videoPlayer = document.getElementById('videoPlayer');
+        const videoSource = document.getElementById('videoSource');
+        const videoTitle = document.getElementById('videoTitle');
+
+        let currentJobId = null;
+        let statusCheckInterval = null;
+
+        // Load matches when year is selected
+        yearSelect.addEventListener('change', async (e) => {
+            const year = e.target.value;
+            matchSelect.innerHTML = '<option value="">-- Loading matches... --</option>';
+            matchSelect.disabled = true;
+
+            if (!year) {
+                matchSelect.innerHTML = '<option value="">-- First select a year --</option>';
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/matches/${year}`);
+                const data = await response.json();
+
+                if (data.matches && data.matches.length > 0) {
+                    matchSelect.innerHTML = '<option value="">-- Choose a match --</option>';
+                    data.matches.forEach(match => {
+                        const option = document.createElement('option');
+                        option.value = match.number;
+                        option.textContent = match.label;
+                        matchSelect.appendChild(option);
+                    });
+                    matchSelect.disabled = false;
+                } else {
+                    matchSelect.innerHTML = '<option value="">-- No matches found --</option>';
+                }
+            } catch (error) {
+                matchSelect.innerHTML = '<option value="">-- Error loading matches --</option>';
+                showError('Failed to load matches: ' + error.message);
+            }
+        });
+
+        // Handle form submission
+        document.getElementById('highlightForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const year = yearSelect.value;
+            const matchNumber = parseInt(matchSelect.value);
+
+            if (!year || !matchNumber) {
+                showError('Please select both year and match');
+                return;
+            }
+
+            // Reset UI
+            hideMessages();
+            videoContainer.style.display = 'none';
+            progressContainer.style.display = 'block';
+            generateBtn.disabled = true;
+            generateBtn.innerHTML = '⏳ Generating... <span class="loading-spinner"></span>';
+
+            try {
+                // Start generation
+                const response = await fetch('/api/generate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        year: year,
+                        match_number: matchNumber
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+
+                currentJobId = data.job_id;
+                
+                // Start polling for status
+                statusCheckInterval = setInterval(checkStatus, 2000);
+
+            } catch (error) {
+                showError('Failed to start generation: ' + error.message);
+                resetUI();
+            }
+        });
+
+        async function checkStatus() {
+            if (!currentJobId) return;
+
+            try {
+                const response = await fetch(`/api/status/${currentJobId}`);
+                const status = await response.json();
+
+                if (status.error) {
+                    throw new Error(status.error);
+                }
+
+                // Update progress
+                progressFill.style.width = status.progress + '%';
+                progressFill.textContent = status.progress + '%';
+                progressMessage.textContent = status.message;
+
+                // Check if complete
+                if (status.status === 'complete') {
+                    clearInterval(statusCheckInterval);
+                    showSuccess('Highlight generated successfully!');
+                    
+                    // Show video
+                    if (status.video_url) {
+                        const matchInfo = matchSelect.options[matchSelect.selectedIndex].textContent;
+                        videoTitle.textContent = matchInfo;
+                        videoSource.src = status.video_url;
+                        videoPlayer.load();
+                        videoContainer.style.display = 'block';
+                        
+                        // Scroll to video
+                        setTimeout(() => {
+                            videoContainer.scrollIntoView({ behavior: 'smooth' });
+                        }, 300);
+                    }
+                    
+                    resetUI();
+                } else if (status.status === 'error') {
+                    clearInterval(statusCheckInterval);
+                    throw new Error(status.message || 'Generation failed');
+                }
+
+            } catch (error) {
+                clearInterval(statusCheckInterval);
+                showError('Error: ' + error.message);
+                resetUI();
+            }
+        }
+
+        function showError(message) {
+            errorMessage.textContent = '❌ ' + message;
+            errorMessage.style.display = 'block';
+            successMessage.style.display = 'none';
+        }
+
+        function showSuccess(message) {
+            successMessage.textContent = '✅ ' + message;
+            successMessage.style.display = 'block';
+            errorMessage.style.display = 'none';
+        }
+
+        function hideMessages() {
+            errorMessage.style.display = 'none';
+            successMessage.style.display = 'none';
+        }
+
+        function resetUI() {
+            generateBtn.disabled = false;
+            generateBtn.innerHTML = '🎬 Generate Highlight';
+            progressContainer.style.display = 'none';
+            progressFill.style.width = '0%';
+            progressFill.textContent = '0%';
+            progressMessage.textContent = 'Starting...';
+        }
+    </script>
+</body>
+</html>
