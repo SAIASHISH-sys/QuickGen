@@ -47,8 +47,10 @@ git push origin main
 - **Runtime**: `Python 3`
 - **Build Command**: 
   ```bash
-  ./build.sh
+  chmod +x build.sh && ./build.sh
   ```
+  **Important:** Make sure to use this exact command - it installs both Python packages AND system dependencies (FFmpeg, Chromium)!
+  
 - **Start Command**: 
   ```bash
   gunicorn web_app:app --bind 0.0.0.0:$PORT --workers 2 --timeout 600
@@ -80,20 +82,25 @@ USE_TEST_MODE=true
 
 Render needs FFmpeg and Chromium for video processing and scoreboard generation.
 
-**Option A: Using Native Dependencies (Recommended)**
+**IMPORTANT:** Render's free tier and web services don't have a separate "Native Dependencies" UI section. Instead, we'll install them via the build command!
 
-In your Render dashboard:
-1. Go to **Environment** → **Native Dependencies**
-2. Add these packages:
-   ```
-   ffmpeg
-   chromium
-   chromium-driver
-   ```
+**Method: Install via Build Script (Works for All Tiers)**
 
-**Option B: Using Docker (Advanced)**
+Your `build.sh` script already handles this! Just make sure your build command in Render is set to:
+```bash
+chmod +x build.sh && ./build.sh
+```
 
-Create a `Dockerfile` if you need more control:
+The script will:
+1. Install Python packages via pip
+2. Install FFmpeg via apt-get
+3. Install Chromium and dependencies
+
+**No additional configuration needed** - the build script handles everything!
+
+**Alternative: Using Dockerfile (If Build Script Doesn't Work)**
+
+If you encounter issues with the build script, switch to Docker:
 ```dockerfile
 FROM python:3.12-slim
 
@@ -113,17 +120,16 @@ COPY . .
 CMD gunicorn web_app:app --bind 0.0.0.0:$PORT --workers 2 --timeout 600
 ```
 
-### 6. Add Persistent Disk (Optional but Recommended)
+### 6. Add Persistent Disk (SKIP THIS - Not Needed!)
 
-To save generated videos between deployments:
+**IMPORTANT UPDATE:** Render's free tier web services have ephemeral storage that persists during the service lifetime. Your generated videos will be stored in the `commentaries/` folder automatically.
 
-1. In Render dashboard, go to **Storage** → **Add Disk**
-2. **Name**: `commentary-storage`
-3. **Mount Path**: `/opt/render/project/src/commentaries`
-4. **Size**: 1 GB (free tier) or more
-5. Click **Save**
+**You DON'T need to configure disk storage** because:
+- ✅ Generated videos stay until you redeploy
+- ✅ The app has smart caching (won't regenerate existing files)
+- ✅ Works perfectly for testing and production
 
-**Note:** Free tier disk is ephemeral. Paid plans have persistent disks.
+**Note:** Persistent disks are only available for paid plans and Background Workers. For web services, the filesystem is sufficient for your use case.
 
 ### 7. Deploy!
 
