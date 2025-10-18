@@ -1,6 +1,8 @@
 import json
 import os
+import sys
 from datetime import datetime
+from pathlib import Path
 from commentary import get_langchain_response
 from texttospeech import text_to_speech_file, clean_commentary_text
 
@@ -123,13 +125,32 @@ def save_commentary(commentary, match_num, teams):
         return None
 
 
+def display_file_summary(match_folder):
+    """Display summary of all saved files in the match folder."""
+    print("\n" + "="*80)
+    print(f"📁 ALL FILES SAVED IN: {match_folder}/")
+    print("="*80)
+    try:
+        if os.path.exists(match_folder):
+            files = os.listdir(match_folder)
+            if files:
+                for file in sorted(files):
+                    file_path = os.path.join(match_folder, file)
+                    if os.path.isfile(file_path):
+                        size = os.path.getsize(file_path)
+                        size_str = f"{size / (1024*1024):.2f} MB" if size > 1024*1024 else f"{size / 1024:.2f} KB"
+                        print(f"  ✓ {file} ({size_str})")
+            else:
+                print("  (No files generated)")
+        else:
+            print("  (Folder not found)")
+    except Exception as e:
+        print(f"  ⚠️ Could not list files: {e}")
+    print("="*80 + "\n")
+
+
 def generate_audio_commentary(commentary, match_num, teams):
     """Generate audio commentary from text."""
-    print("\nConverting commentary to speech...\n")
-    
-    # Clean the commentary text for TTS
-    cleaned_text = clean_commentary_text(commentary)
-    
     # Create match-specific folder
     team_names = "_vs_".join(teams) if teams else "unknown_teams"
     match_folder = f"commentaries/match_{match_num}_{team_names}"
@@ -138,15 +159,179 @@ def generate_audio_commentary(commentary, match_num, teams):
     # Create audio filename in the match folder
     audio_filename = f"{match_folder}/commentary.mp3"
     
+    # Check if audio file already exists
+    if os.path.exists(audio_filename):
+        file_size = os.path.getsize(audio_filename)
+        if file_size > 0:
+            print(f"\n✓ Audio file already exists: {audio_filename} ({file_size / 1024:.2f} KB)")
+            print("   Skipping audio generation...\n")
+            return audio_filename
+    
+    print("\n🎵 Converting commentary to speech...\n")
+    
+    # Clean the commentary text for TTS
+    cleaned_text = clean_commentary_text(commentary)
+    
     try:
         # Generate audio file
         audio_path = text_to_speech_file(cleaned_text, audio_filename)
-        print(f"\nAudio commentary saved to: {audio_path}\n")
+        print(f"\n✅ Audio commentary saved to: {audio_path}\n")
         return audio_path
     
     except Exception as e:
-        print(f"\n Error generating audio commentary: {e}\n")
+        print(f"\n❌ Error generating audio commentary: {e}\n")
         print("Note: Make sure ELEVENLABS_API_KEY is set in your .env file")
+        return None
+
+def generate_scoreboards(match_folder):
+    """Generate scoreboard images for the match."""
+    # Check if scoreboards already exist
+    scoreboard1 = Path(match_folder) / "scoreboard_inning1.png"
+    scoreboard2 = Path(match_folder) / "scoreboard_inning2.png"
+    
+    if scoreboard1.exists() or scoreboard2.exists():
+        existing = []
+        if scoreboard1.exists():
+            size1 = scoreboard1.stat().st_size
+            existing.append(f"scoreboard_inning1.png ({size1 / 1024:.2f} KB)")
+        if scoreboard2.exists():
+            size2 = scoreboard2.stat().st_size
+            existing.append(f"scoreboard_inning2.png ({size2 / 1024:.2f} KB)")
+        
+        print(f"\n✓ Scoreboard(s) already exist: {', '.join(existing)}")
+        print("   Skipping scoreboard generation...\n")
+        return True
+    
+    print("\n📊 Generating scoreboard images...\n")
+    
+    try:
+        # Add graphs_gen to Python path
+        sys.path.insert(0, str(Path(__file__).parent / "graphs_gen"))
+        from img_generator import generate_scoreboards_sync
+        
+        # Generate scoreboards
+        generated_images = generate_scoreboards_sync(match_folder)
+        
+        if generated_images:
+            print(f"\n✅ Generated {len(generated_images)} scoreboard image(s)")
+            return True
+        else:
+            print("\n⚠️ No scoreboard images generated (match_data.json may not have innings data)")
+            return False
+            
+    except Exception as e:
+        print(f"\n❌ Error generating scoreboards: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
+
+
+def generate_ai_video(audio_file, match_num, teams):
+    """Generate AI video with HeyGen."""
+    # Check if video already exists
+    team_names = "_vs_".join(teams)
+    match_folder = f"commentaries/match_{match_num}_{team_names}"
+    output_path = f"{match_folder}/video.mp4"
+    
+    if os.path.exists(output_path):
+        file_size = os.path.getsize(output_path)
+        if file_size > 0:
+            print(f"\n✓ Video file already exists: {output_path} ({file_size / (1024*1024):.2f} MB)")
+            print("   Skipping video generation...\n")
+            return output_path
+    
+    print("\n🎬 Generating AI video with HeyGen...\n")
+    
+    try:
+        from aivideo import (upload_audio_file, generate_video, wait_for_video_with_webhook_fallback, 
+                            download_video, API_KEY, DEFAULT_AVATAR_ID, WEBHOOK_URL)
+        
+        if not API_KEY or API_KEY == "YOUR_HEYGEN_API_KEY_HERE":
+            print("❌ HEYGEN_API_KEY not found in .env file. Skipping video generation.")
+            return None
+        
+        # Upload audio
+        print("  Uploading audio to HeyGen...")
+        audio_url = upload_audio_file(API_KEY, audio_file)
+        
+        if not audio_url:
+            print("❌ Failed to upload audio")
+            return None
+        
+        # Generate video
+        video_title = f"IPL 2008 - Match {match_num} - {' vs '.join(teams)}"
+        print(f"  Creating AI avatar video...")
+        
+        video_id = generate_video(API_KEY, DEFAULT_AVATAR_ID, audio_url, video_title, WEBHOOK_URL)
+        
+        if not video_id:
+            print("❌ Failed to generate video")
+            return None
+        
+        # Wait for video (webhook with polling fallback)
+        print("  Waiting for video generation (this may take a few minutes)...")
+        video_url = wait_for_video_with_webhook_fallback(API_KEY, video_id, WEBHOOK_URL)
+        
+        if not video_url:
+            print("❌ Failed to get video URL")
+            return None
+        
+        print(f"\n✅ Video generated successfully!")
+        print(f"   Video URL: {video_url}\n")
+        
+        # Download video
+        print("  Downloading video...")
+        if download_video(video_url, output_path):
+            print(f"✅ Video downloaded to: {output_path}")
+            
+            # Save video URL for reference
+            try:
+                with open(f"{match_folder}/video_url.txt", 'w') as f:
+                    f.write(f"Video URL: {video_url}\n")
+                    f.write(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+            except Exception as e:
+                print(f"⚠️ Could not save video URL: {e}")
+            
+            return output_path
+        else:
+            print("❌ Failed to download video")
+            return None
+            
+    except ImportError as e:
+        print(f"❌ Could not import aivideo module: {e}")
+        return None
+    except Exception as e:
+        print(f"❌ Error generating video: {e}")
+        import traceback
+        traceback.print_exc()
+        return None
+
+
+def combine_video_with_scoreboards(match_folder):
+    """Combine video with scoreboard overlays."""
+    print("\n🎥 Creating final video with scoreboard overlays...\n")
+    
+    try:
+        from video_combining import combine_video_with_scoreboards
+        
+        result = combine_video_with_scoreboards(
+            match_folder,
+            video_before_scoreboard=5,
+            scoreboard_duration=3,
+            fade_duration=1.0
+        )
+        
+        if result:
+            print(f"\n✅ Final video created successfully!")
+            return result
+        else:
+            print("\n❌ Failed to create final video")
+            return None
+            
+    except Exception as e:
+        print(f"\n❌ Error combining video with scoreboards: {e}")
+        import traceback
+        traceback.print_exc()
         return None
 
 
@@ -192,79 +377,57 @@ def main():
     # Save commentary text
     save_commentary(commentary, match_num, teams)
     
-    # Generate audio commentary
-    audio_choice = input("\nWould you like to generate audio commentary? (y/n): ").strip().lower()
-    audio_file = None
-    if audio_choice == 'y':
-        audio_file = generate_audio_commentary(commentary, match_num, teams)
+    # Create match folder path
+    team_names = "_vs_".join(teams)
+    match_folder = f"commentaries/match_{match_num}_{team_names}"
     
-    # Generate AI video
-    if audio_file:
-        video_choice = input("\nWould you like to generate AI video with this commentary? (y/n): ").strip().lower()
-        if video_choice == 'y':
-            try:
-                from aivideo import (upload_audio_file, generate_video, wait_for_video_with_webhook_fallback, 
-                                    download_video, API_KEY, DEFAULT_AVATAR_ID, WEBHOOK_URL)
-                
-                if not API_KEY or API_KEY == "YOUR_HEYGEN_API_KEY_HERE":
-                    print("  HEYGEN_API_KEY not found in .env file. Skipping video generation.")
-                else:
-                    print("\n Uploading audio to HeyGen...")
-                    audio_url = upload_audio_file(API_KEY, audio_file)
-                    
-                    if audio_url:
-                        video_title = f"IPL 2008 - Match {match_num} - {' vs '.join(teams)}"
-                        print(f"\n Generating AI video...")
-                        
-                        # Generate video with webhook URL if available
-                        video_id = generate_video(API_KEY, DEFAULT_AVATAR_ID, audio_url, video_title, WEBHOOK_URL)
-                        
-                        if video_id:
-                            # Try webhook first, then fall back to polling
-                            video_url = wait_for_video_with_webhook_fallback(API_KEY, video_id, WEBHOOK_URL)
-                            
-                            if video_url:
-                                print(f"\n Video generated successfully!")
-                                print(f" Video URL: {video_url}")
-                                
-                                # Ask if user wants to download
-                                download_choice = input("\n Download the video? (y/n): ").strip().lower()
-                                if download_choice == 'y':
-                                    team_names = "_vs_".join(teams)
-                                    match_folder = f"commentaries/match_{match_num}_{team_names}"
-                                    os.makedirs(match_folder, exist_ok=True)
-                                    output_path = f"{match_folder}/video.mp4"
-                                    download_video(video_url, output_path)
-                                    
-                                    # Also save video URL for reference
-                                    try:
-                                        with open(f"{match_folder}/video_url.txt", 'w') as f:
-                                            f.write(f"Video URL: {video_url}\n")
-                                            f.write(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
-                                    except Exception as e:
-                                        print(f"Could not save video URL: {e}")
-            except ImportError:
-                print("Could not import aivideo module. Make sure aivideo.py is in the same directory.")
-            except Exception as e:
-                print(f"Error generating video: {e}")
+    # Step 1: Generate scoreboards automatically
+    print("\n" + "="*80)
+    print("STEP 1: GENERATING SCOREBOARDS")
+    print("="*80)
+    generate_scoreboards(match_folder)
     
-    # Display summary of saved files
-    if audio_file or video_choice == 'y':
-        team_names = "_vs_".join(teams)
-        match_folder = f"commentaries/match_{match_num}_{team_names}"
-        print("\n" + "="*80)
-        print(f"All files saved in: {match_folder}/")
-        print("="*80)
-        try:
-            files = os.listdir(match_folder)
-            for file in sorted(files):
-                file_path = os.path.join(match_folder, file)
-                size = os.path.getsize(file_path)
-                size_str = f"{size / (1024*1024):.2f} MB" if size > 1024*1024 else f"{size / 1024:.2f} KB"
-                print(f"  {file} ({size_str})")
-        except Exception as e:
-            print(f"   Could not list files: {e}")
-        print("="*80 + "\n")
+    # Step 2: Generate audio commentary automatically
+    print("\n" + "="*80)
+    print("STEP 2: GENERATING AUDIO COMMENTARY")
+    print("="*80)
+    audio_file = generate_audio_commentary(commentary, match_num, teams)
+    
+    if not audio_file:
+        print("\n⚠️ Audio generation failed. Cannot proceed with video generation.")
+        display_file_summary(match_folder)
+        return
+    
+    # Step 3: Ask if user wants to generate AI video
+    print("\n" + "="*80)
+    print("STEP 3: AI VIDEO GENERATION")
+    print("="*80)
+    video_choice = input("\nWould you like to generate AI avatar video? (y/n): ").strip().lower()
+    
+    video_file = None
+    if video_choice == 'y':
+        video_file = generate_ai_video(audio_file, match_num, teams)
+        
+        # Step 4: If video was generated, automatically create final video with scoreboards
+        if video_file:
+            print("\n" + "="*80)
+            print("STEP 4: CREATING FINAL VIDEO WITH SCOREBOARDS")
+            print("="*80)
+            
+            # Check if scoreboards exist
+            scoreboard1 = Path(match_folder) / "scoreboard_inning1.png"
+            scoreboard2 = Path(match_folder) / "scoreboard_inning2.png"
+            
+            if scoreboard1.exists() or scoreboard2.exists():
+                final_video = combine_video_with_scoreboards(match_folder)
+                if final_video:
+                    print(f"\n🎉 Complete! Final video ready: {final_video}")
+            else:
+                print("\n⚠️ No scoreboards found. Final video will not include scoreboards.")
+                print(f"   You can still find the avatar video at: {video_file}")
+    
+    # Display summary of all saved files
+    display_file_summary(match_folder)
     
     # Ask if user wants to select another match
     another = input("\nWould you like to select another match? (y/n): ").strip().lower()

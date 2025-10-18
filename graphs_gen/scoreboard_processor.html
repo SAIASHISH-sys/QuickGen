@@ -1,0 +1,237 @@
+<!-- scoreboard_summary.html -->
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Scoreboard Summary</title>
+    <style>
+        /* General Body and Container Styling */
+        body {
+            margin: 0;
+            background-color: #a9f0fa; /* Dark background for video overlay */
+            font-family: 'Segoe UI', Arial, sans-serif;
+            color: #fff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+            zoom: 1; /* Adjust overall size if needed */
+        }
+
+        .scoreboard-container {
+            background-color: rgba(0, 0, 0, 0.85); /* Slightly transparent dark background */
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.4); /* Green glow effect */
+            width: 90%; /* Max width relative to viewport */
+            max-width: 1200px; /* Absolute max width */
+            padding: 30px;
+            box-sizing: border-box;
+        }
+
+        /* Header (Team Name & Inning) */
+        .scoreboard-header {
+            text-align: center;
+            margin-bottom: 25px;
+        }
+
+        .team-name {
+            font-size: 2.8em;
+            font-weight: bold;
+            color: #00ff00; /* Bright green for team name */
+            margin-bottom: 5px;
+            letter-spacing: 1.5px;
+        }
+
+        .inning-title {
+            font-size: 1.4em;
+            color: #ccc;
+            margin-bottom: 15px;
+        }
+
+        /* Table Styling */
+        .scoreboard-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+            font-size: 1.1em;
+        }
+
+        .scoreboard-table th,
+        .scoreboard-table td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            white-space: nowrap; /* Prevent wrapping for player names/stats */
+        }
+
+        .scoreboard-table th {
+            background-color: rgba(0, 255, 0, 0.1); /* Light green header background */
+            color: #00ff00;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .scoreboard-table tr:hover td {
+            background-color: rgba(0, 255, 0, 0.05); /* Subtle hover effect */
+        }
+
+        /* Specific Column Widths/Alignment */
+        .col-player { width: 30%; font-weight: bold; color: #eee; }
+        .col-dismissal { width: 35%; color: #aaa; font-style: italic;}
+        .col-runs, .col-balls, .col-fours, .col-sixes, .col-sr {
+            width: 7%; /* Equal width for stats columns */
+            text-align: center;
+        }
+        .col-runs { color: #00ff00; font-weight: bold; } /* Runs highlighted */
+
+        /* Totals and Extras */
+        .totals-row, .extras-row {
+            background-color: rgba(0, 255, 0, 0.15); /* Slightly darker green background */
+            font-weight: bold;
+            font-size: 1.2em;
+        }
+
+        .totals-row td, .extras-row td {
+            border-top: 2px solid #00ff00; /* Stronger top border */
+        }
+
+        .totals-label { text-align: right; padding-right: 15px; color: #00ff00; }
+        .extras-label { text-align: left; padding-left: 15px; color: #00ff00; }
+        .total-score-value, .total-overs-value { text-align: center; color: #00ff00; }
+        .total-extras-value { text-align: center; color: #eee; }
+
+        .final-score-summary {
+            text-align: right;
+            margin-top: 20px;
+            font-size: 1.8em;
+            font-weight: bold;
+            color: #00ff00;
+            letter-spacing: 1px;
+        }
+        .final-overs-summary {
+            font-size: 1.2em;
+            color: #ccc;
+            margin-top: 5px;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="scoreboard-container">
+        <div class="scoreboard-header">
+            <div class="team-name" id="teamName"></div>
+            <div class="inning-title" id="inningTitle"></div>
+        </div>
+
+        <table class="scoreboard-table">
+            <thead>
+                <tr>
+                    <th class="col-player">Batsman</th>
+                    <th class="col-dismissal">Dismissal</th>
+                    <th class="col-runs">R</th>
+                    <th class="col-balls">B</th>
+                    <th class="col-fours">4s</th>
+                    <th class="col-sixes">6s</th>
+                    <th class="col-sr">SR</th>
+                </tr>
+            </thead>
+            <tbody id="battingEntries">
+                <!-- Batting entries will be inserted here by JavaScript -->
+            </tbody>
+            <tfoot>
+                <tr class="extras-row">
+                    <td class="extras-label" colspan="2" id="extrasLabel"></td>
+                    <td class="total-extras-value" colspan="5" id="extrasValue"></td>
+                </tr>
+                <tr class="totals-row">
+                    <td class="totals-label" colspan="2">TOTAL</td>
+                    <td class="total-score-value" colspan="3" id="totalScore"></td>
+                    <td class="total-overs-value" colspan="2" id="totalOvers"></td>
+                </tr>
+            </tfoot>
+        </table>
+
+        <!-- This section could be redundant if totals are in table footer,
+             but useful for a quick big summary -->
+        <!--
+        <div class="final-score-summary">
+            Total Score: <span id="finalScoreSummary"></span>
+        </div>
+        <div class="final-overs-summary">
+            Overs: <span id="finalOversSummary"></span>
+        </div>
+        -->
+    </div>
+
+    <script>
+        function renderScoreboard(data) {
+            console.log('Rendering scoreboard with data:', data);
+            
+            // Set team name and inning title
+            const teamNameEl = document.getElementById('teamName');
+            const inningTitleEl = document.getElementById('inningTitle');
+            
+            if (teamNameEl) teamNameEl.textContent = data.name || "Unknown Team";
+            if (inningTitleEl) inningTitleEl.textContent = "(20 ovs maximum)";
+
+            // Get batting body element
+            const battingBody = document.getElementById('battingEntries');
+            if (!battingBody) {
+                console.error('battingEntries element not found');
+                return;
+            }
+            
+            battingBody.innerHTML = ''; // Clear previous entries
+
+            // Add batting entries
+            if (data.batting_entries && data.batting_entries.length > 0) {
+                data.batting_entries.forEach(player => {
+                    const row = document.createElement('tr');
+                    
+                    // Build dismissal text
+                    let dismissalText = player.dismissal_status || 'not out';
+                    if (player.dismissal_bowler && player.dismissal_bowler.trim() !== '') {
+                        dismissalText += ' ' + player.dismissal_bowler;
+                    }
+                    
+                    row.innerHTML = `
+                        <td class="col-player">${player.player || ''}</td>
+                        <td class="col-dismissal">${dismissalText}</td>
+                        <td class="col-runs">${player.runs || 0}</td>
+                        <td class="col-balls">${player.balls || 0}</td>
+                        <td class="col-fours">${player.fours || 0}</td>
+                        <td class="col-sixes">${player.sixes || 0}</td>
+                        <td class="col-sr">${player.strike_rate || 0}</td>
+                    `;
+                    battingBody.appendChild(row);
+                });
+            }
+
+            // Update Extras
+            const extrasLabelEl = document.getElementById('extrasLabel');
+            const extrasValueEl = document.getElementById('extrasValue');
+            if (extrasLabelEl && data.extras) {
+                extrasLabelEl.textContent = data.extras.label || 'Extras';
+            }
+            if (extrasValueEl && data.extras) {
+                extrasValueEl.textContent = data.extras.value || 0;
+            }
+
+            // Update Totals
+            const totalScoreEl = document.getElementById('totalScore');
+            const totalOversEl = document.getElementById('totalOvers');
+            if (totalScoreEl) {
+                totalScoreEl.textContent = data.total_score || '0';
+            }
+            if (totalOversEl) {
+                totalOversEl.textContent = `(${data.overs || '0'} ov)`;
+            }
+            
+            console.log('Scoreboard rendering complete');
+        }
+      
+    </script>
+</body>
+</html>

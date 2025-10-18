@@ -13,7 +13,7 @@
 
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #3957dd 0%, #4ba276 100%);
             min-height: 100vh;
             padding: 20px;
             color: #333;
@@ -43,7 +43,6 @@
 
         .card {
             background: white;
-            border-radius: 15px;
             padding: 30px;
             box-shadow: 0 10px 40px rgba(0,0,0,0.2);
             margin-bottom: 30px;
@@ -66,7 +65,7 @@
             padding: 12px 15px;
             font-size: 1em;
             border: 2px solid #e0e0e0;
-            border-radius: 8px;
+            /* border-radius: 8px; */
             background: white;
             cursor: pointer;
             transition: all 0.3s ease;
@@ -90,7 +89,7 @@
             color: white;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             border: none;
-            border-radius: 8px;
+            /* border-radius: 8px; */
             cursor: pointer;
             transition: all 0.3s ease;
             margin-top: 10px;
@@ -120,7 +119,7 @@
             width: 100%;
             height: 30px;
             background: #f0f0f0;
-            border-radius: 15px;
+            /* border-radius: 15px; */
             overflow: hidden;
             margin-bottom: 10px;
         }
@@ -150,9 +149,9 @@
         .video-wrapper {
             position: relative;
             width: 100%;
-            padding-bottom: 177.78%; /* 9:16 aspect ratio for 720x1280 */
+            padding-bottom: 80%; /* 9:16 aspect ratio for 720x1280 */
             background: #000;
-            border-radius: 10px;
+            /* border-radius: 10px; */
             overflow: hidden;
         }
 
@@ -162,6 +161,28 @@
             left: 0;
             width: 100%;
             height: 100%;
+        }
+
+        .download-btn {
+            display: none;
+            margin-top: 15px;
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            /* border-radius: 8px; */
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .download-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
         }
 
         .video-title {
@@ -176,7 +197,7 @@
             padding: 15px;
             background: #fee;
             border: 1px solid #fcc;
-            border-radius: 8px;
+            /* border-radius: 8px; */
             color: #c33;
             margin-top: 20px;
         }
@@ -186,7 +207,7 @@
             padding: 15px;
             background: #efe;
             border: 1px solid #cfc;
-            border-radius: 8px;
+            /* border-radius: 8px; */
             color: #3c3;
             margin-top: 20px;
         }
@@ -267,9 +288,13 @@
                 2. Click "Generate Highlight" to start<br>
                 3. AI will generate commentary using Google Gemini<br>
                 4. Text will be converted to speech with ElevenLabs<br>
-                5. HeyGen will create an AI avatar video<br>
+                5. HeyGen will create an AI avatar video (webhook waits up to 10 minutes)<br>
+                6. Scoreboard images will be generated automatically<br>
+                7. Final video with scoreboards and transitions will be created<br>
                 <br>
-                <strong>⏱️ Processing time:</strong> 2-5 minutes depending on server load
+                <strong>⏱️ Processing time:</strong> 3-7 minutes (up to 10 minutes if server is busy)<br>
+                <strong>📹 Output:</strong> Full HD video with commentary, scoreboards, and smooth transitions<br>
+                <strong>🔔 Note:</strong> Please be patient during video generation - it may take several minutes
             </div>
         </div>
 
@@ -281,6 +306,7 @@
                     Your browser does not support the video tag.
                 </video>
             </div>
+            <a id="downloadBtn" class="download-btn" href="#" download>Download Video</a>
         </div>
     </div>
 
@@ -297,6 +323,7 @@
         const videoPlayer = document.getElementById('videoPlayer');
         const videoSource = document.getElementById('videoSource');
         const videoTitle = document.getElementById('videoTitle');
+        const downloadBtn = document.getElementById('downloadBtn');
 
         let currentJobId = null;
         let statusCheckInterval = null;
@@ -314,6 +341,16 @@
 
             try {
                 const response = await fetch(`/api/matches/${year}`);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const contentType = response.headers.get("content-type");
+                if (!contentType || !contentType.includes("application/json")) {
+                    throw new Error("Server returned non-JSON response");
+                }
+                
                 const data = await response.json();
 
                 if (data.matches && data.matches.length > 0) {
@@ -349,6 +386,7 @@
             // Reset UI
             hideMessages();
             videoContainer.style.display = 'none';
+            downloadBtn.style.display = 'none';
             progressContainer.style.display = 'block';
             generateBtn.disabled = true;
             generateBtn.innerHTML = '⏳ Generating... <span class="loading-spinner"></span>';
@@ -366,6 +404,15 @@
                     })
                 });
 
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const contentType = response.headers.get("content-type");
+                if (!contentType || !contentType.includes("application/json")) {
+                    throw new Error("Server returned non-JSON response");
+                }
+
                 const data = await response.json();
 
                 if (data.error) {
@@ -374,8 +421,13 @@
 
                 currentJobId = data.job_id;
                 
-                // Start polling for status
-                statusCheckInterval = setInterval(checkStatus, 2000);
+                // Wait 3 seconds before starting to poll (give backend time to initialize)
+                setTimeout(() => {
+                    // Start polling for status
+                    statusCheckInterval = setInterval(checkStatus, 2000);
+                    // Also check immediately
+                    checkStatus();
+                }, 3000);
 
             } catch (error) {
                 showError('Failed to start generation: ' + error.message);
@@ -388,6 +440,23 @@
 
             try {
                 const response = await fetch(`/api/status/${currentJobId}`);
+                
+                if (!response.ok) {
+                    // If we get 404, the job might not be initialized yet
+                    // Don't throw error, just wait for next poll
+                    if (response.status === 404) {
+                        console.log('Job not found yet, waiting...');
+                        progressMessage.textContent = 'Waiting for job to initialize...';
+                        return;
+                    }
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const contentType = response.headers.get("content-type");
+                if (!contentType || !contentType.includes("application/json")) {
+                    throw new Error("Server returned non-JSON response");
+                }
+                
                 const status = await response.json();
 
                 if (status.error) {
@@ -411,6 +480,10 @@
                         videoSource.src = status.video_url;
                         videoPlayer.load();
                         videoContainer.style.display = 'block';
+                        
+                        // Show download button
+                        downloadBtn.href = `/api/download/${currentJobId}`;
+                        downloadBtn.style.display = 'inline-block';
                         
                         // Scroll to video
                         setTimeout(() => {

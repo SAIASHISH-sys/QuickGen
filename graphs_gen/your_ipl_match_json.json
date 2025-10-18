@@ -1,0 +1,160 @@
+{
+  "info": [
+    "Win Probability",
+    "Kolkata Knight Riders (20 ovs maximum)",
+    "Royal Challengers Bangalore (T: 223 runs from 20 ovs)",
+    "Unlocking the magic of Statsguru",
+    "Match Flow",
+    "Match Details"
+  ],
+  "teams": [
+    "KKR",
+    "RCB"
+  ],
+  "innings": [
+    {
+      "name": "Kolkata Knight Riders\u00a0\u00a0(20 ovs maximum)",
+      "batting": [
+        {
+          "player": "Sourav Ganguly(c)",
+          "runs": "10",
+          "balls": "12",
+          "fours": "2",
+          "sixes": "0",
+          "strike_rate": "83.33"
+        },
+        {
+          "player": "Brendon McCullum\u2020",
+          "runs": "158",
+          "balls": "73",
+          "fours": "10",
+          "sixes": "13",
+          "strike_rate": "216.43"
+        },
+        {
+          "player": "Ricky Ponting",
+          "runs": "20",
+          "balls": "20",
+          "fours": "1",
+          "sixes": "1",
+          "strike_rate": "100.00"
+        },
+        {
+          "player": "David Hussey",
+          "runs": "12",
+          "balls": "12",
+          "fours": "1",
+          "sixes": "0",
+          "strike_rate": "100.00"
+        },
+        {
+          "player": "Mohammad Hafeez",
+          "runs": "5",
+          "balls": "3",
+          "fours": "1",
+          "sixes": "0",
+          "strike_rate": "166.66"
+        },
+        {
+          "Extras": "Extras(b 4, lb 4, w 9)17"
+        }
+      ]
+    },
+    {
+      "name": "Royal Challengers Bangalore\u00a0\u00a0(T: 223 runs from 20 ovs)",
+      "batting": [
+        {
+          "player": "Rahul Dravid(c)",
+          "runs": "2",
+          "balls": "3",
+          "fours": "0",
+          "sixes": "0",
+          "strike_rate": "66.66"
+        },
+        {
+          "player": "Wasim Jaffer",
+          "runs": "6",
+          "balls": "16",
+          "fours": "0",
+          "sixes": "0",
+          "strike_rate": "37.50"
+        },
+        {
+          "player": "Virat Kohli",
+          "runs": "1",
+          "balls": "5",
+          "fours": "0",
+          "sixes": "0",
+          "strike_rate": "20.00"
+        },
+        {
+          "player": "Jacques Kallis",
+          "runs": "8",
+          "balls": "7",
+          "fours": "0",
+          "sixes": "1",
+          "strike_rate": "114.28"
+        },
+        {
+          "player": "Cameron White",
+          "runs": "6",
+          "balls": "10",
+          "fours": "0",
+          "sixes": "0",
+          "strike_rate": "60.00"
+        },
+        {
+          "player": "Mark Boucher\u2020",
+          "runs": "7",
+          "balls": "9",
+          "fours": "1",
+          "sixes": "0",
+          "strike_rate": "77.77"
+        },
+        {
+          "player": "Balachandra Akhil",
+          "runs": "0",
+          "balls": "2",
+          "fours": "0",
+          "sixes": "0",
+          "strike_rate": "0.00"
+        },
+        {
+          "player": "Ashley Noffke",
+          "runs": "9",
+          "balls": "10",
+          "fours": "1",
+          "sixes": "0",
+          "strike_rate": "90.00"
+        },
+        {
+          "player": "Praveen Kumar",
+          "runs": "18",
+          "balls": "15",
+          "fours": "1",
+          "sixes": "2",
+          "strike_rate": "120.00"
+        },
+        {
+          "player": "Zaheer Khan",
+          "runs": "3",
+          "balls": "8",
+          "fours": "0",
+          "sixes": "0",
+          "strike_rate": "37.50"
+        },
+        {
+          "player": "Sunil Joshi",
+          "runs": "3",
+          "balls": "6",
+          "fours": "0",
+          "sixes": "0",
+          "strike_rate": "50.00"
+        },
+        {
+          "Extras": "Extras(lb 8, w 11)19"
+        }
+      ]
+    }
+  ]
+}

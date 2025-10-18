@@ -12,7 +12,7 @@ API_KEY = os.getenv("HEYGEN_API_KEY")
 WEBHOOK_PORT = int(os.getenv("WEBHOOK_PORT", "5000"))
 WEBHOOK_URL = os.getenv("WEBHOOK_URL", None)  
 
-DEFAULT_AVATAR_ID = "Artur_sitting_sofacasual_front"  # HeyGen's public avatar
+DEFAULT_AVATAR_ID = "Marcus_expressive_2024120201"  # HeyGen's public avatar
 
 
 VIDEO_WIDTH = int(os.getenv("VIDEO_WIDTH", "1280"))
@@ -308,7 +308,7 @@ def start_webhook_server(port=5000):
     return thread
 
 
-def wait_for_webhook(timeout=600):
+def wait_for_webhook(timeout=250, status_callback=None):
     """Wait for webhook callback with timeout."""
     global webhook_result, webhook_event
     
@@ -316,35 +316,47 @@ def wait_for_webhook(timeout=600):
     print("   Press Ctrl+C to fall back to polling")
     
     try:
-        if webhook_event.wait(timeout):
-            # Webhook received
-            event_type = webhook_result.get('event_type', '')
+        start_time = time.time()
+        check_interval = 5  # Check every 5 seconds
+        
+        while True:
+            elapsed = time.time() - start_time
+            remaining = timeout - elapsed
             
-            if event_type == 'video.complete':
-                video_url = webhook_result.get('data', {}).get('video_url')
-                if video_url:
-                    print(f" Video processing completed (via webhook)!")
-                    print(f" Download URL: {video_url}")
-                    return video_url
-            elif event_type == 'video.failed':
-                error = webhook_result.get('data', {}).get('error', 'Unknown error')
-                print(f" Video processing failed: {error}")
+            # Update status if callback provided
+            if status_callback and elapsed > 0 and int(elapsed) % 15 == 0:  # Every 15 seconds
+                status_callback(f"Still waiting for HeyGen webhook... ({int(elapsed)}s elapsed, ~{int(remaining)}s remaining)")
+            
+            # Check if webhook received
+            if webhook_event.wait(check_interval):
+                # Webhook received
+                event_type = webhook_result.get('event_type', '')
+                
+                if event_type == 'video.complete':
+                    video_url = webhook_result.get('data', {}).get('video_url')
+                    if video_url:
+                        print(f" Video processing completed (via webhook)!")
+                        print(f" Download URL: {video_url}")
+                        return video_url
+                elif event_type == 'video.failed':
+                    error = webhook_result.get('data', {}).get('error', 'Unknown error')
+                    print(f" Video processing failed: {error}")
+                    return None
+                
+                # Unknown event
+                print(f"Received unknown webhook event: {event_type}")
                 return None
             
-            # Unknown event
-            print(f"Received unknown webhook event: {event_type}")
-            return None
-        else:
-            # Timeout
-            print("Webhook timeout. Falling back to polling...")
-            return None
+            # Check timeout
+            if elapsed >= timeout:
+                print("Webhook timeout. Falling back to polling...")
+                return None
     
     except KeyboardInterrupt:
         print("\n Webhook wait interrupted. Falling back to polling...")
         return None
 
-
-def wait_for_video_with_webhook_fallback(api_key, video_id, webhook_url=None, webhook_timeout=600):
+def wait_for_video_with_webhook_fallback(api_key, video_id, webhook_url=None, webhook_timeout=250, status_callback=None):
     """
     Try webhook first, then fall back to polling if webhook fails or times out.
     
@@ -352,7 +364,8 @@ def wait_for_video_with_webhook_fallback(api_key, video_id, webhook_url=None, we
         api_key: HeyGen API key
         video_id: Video ID from generate_video()
         webhook_url: Optional webhook URL (if None, will skip webhook and use polling)
-        webhook_timeout: Timeout in seconds for webhook (default 600 = 10 minutes)
+        webhook_timeout: Timeout in seconds for webhook (default 250 sec)
+        status_callback: Optional callback function to update status messages
     
     Returns:
         video_url: URL of completed video, or None if failed
@@ -382,8 +395,8 @@ def wait_for_video_with_webhook_fallback(api_key, video_id, webhook_url=None, we
         webhook_event.clear()
         webhook_result = {}
         
-        # Wait for webhook
-        video_url = wait_for_webhook(timeout=webhook_timeout)
+        # Wait for webhook with status callback
+        video_url = wait_for_webhook(timeout=webhook_timeout, status_callback=status_callback)
         
         # If webhook succeeded, return the URL
         if video_url:
@@ -391,6 +404,8 @@ def wait_for_video_with_webhook_fallback(api_key, video_id, webhook_url=None, we
         
         # Webhook failed or timed out, fall back to polling
         print(f"\n Webhook failed or timed out. Switching to polling method...")
+        if status_callback:
+            status_callback("Webhook timeout - switching to polling method...")
     else:
         print(f"\n No webhook URL provided. Using polling method...")
     
@@ -501,7 +516,7 @@ def main():
     
     if use_webhook and webhook_url_to_use:
         # Try webhook first
-        video_url = wait_for_webhook(timeout=600)
+        video_url = wait_for_webhook(timeout=250)
         
         # If webhook failed/timeout, fall back to polling
         if not video_url:
