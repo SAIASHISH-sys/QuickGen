@@ -475,12 +475,18 @@ if __name__ == '__main__':
     os.makedirs('templates', exist_ok=True)
     os.makedirs('static', exist_ok=True)
     
+    # Get port from environment variable (for Render deployment) or default to 5200
+    port = int(os.getenv('PORT', 5200))
+    
     print("\n" + "="*80)
     print("🎬 IPL HIGHLIGHT GENERATOR - WEB INTERFACE")
     print("="*80)
     print("\n🌐 Starting web server...")
-    print("   Open your browser and go to: http://localhost:5200")
+    print(f"   Port: {port}")
+    print(f"   Open your browser and go to: http://localhost:{port}")
     print("\n   Press Ctrl+C to stop the server")
     print("="*80 + "\n")
     
-    app.run(debug=True, host='0.0.0.0', port=5200)
+    # Use debug=False for production (Render)
+    debug_mode = os.getenv('FLASK_ENV') != 'production'
+    app.run(debug=debug_mode, host='0.0.0.0', port=port)
