@@ -1,11 +1,11 @@
 """
-Image Generator - Generate scoreboard images using pyppeteer
+Image Generator - Generate scoreboard images using pyppeteer2
 """
 import json
 import os
 import asyncio
 from pathlib import Path
-from pyppeteer import launch
+from pyppeteer2 import launch
 from data_processor import extract_scoreboard_data
 
 

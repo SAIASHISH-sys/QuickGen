@@ -177,12 +177,14 @@ View real-time logs in Render dashboard:
 **Solution:** Add `ffmpeg` to Native Dependencies in Render dashboard.
 
 #### Issue 4: Chromium/Pyppeteer Errors
-**Solution:** Add `chromium` and `chromium-driver` to Native Dependencies.
+**Solution:** The build script automatically installs `chromium` and `chromium-driver`.
+
+**Note:** We use `pyppeteer2` (not `pyppeteer`) to avoid dependency conflicts with `websockets` library. The original `pyppeteer` requires `websockets<11.0` but `elevenlabs` requires `websockets>=11.0`.
 
 #### Issue 5: Out of Memory
 **Solution:** 
 - Free tier has 512MB RAM
-- Upgrade to Starter plan (7GB RAM) if needed
+- Upgrade to Starter plan (512MB dedicated) if needed
 - Or reduce concurrent processing
 
 #### Issue 6: Disk Space Full
