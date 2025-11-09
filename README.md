@@ -1,4 +1,5 @@
-# 🎬 IPL AI Highlight Generator
+# 🎬 QuickGen
+  IPL AI Highlight Generator
 
 An AI-powered web application that automatically generates professional cricket commentary highlights with AI avatars, dynamic scoreboards, and smooth transitions from IPL match data. Uses Google Gemini for commentary generation, ElevenLabs for text-to-speech, HeyGen for AI avatar videos, and FFmpeg for professional video production.
 
